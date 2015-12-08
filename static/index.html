@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en" ng-app="alarmail">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Alarmail</title>
+    <link href="css/vendor.css" rel="stylesheet">
+    <link href="css/app.css" rel="stylesheet">
+    <script src="js/vendor.js"></script>
+    <script src="js/app.js"></script>
+  </head>
+  <body ng-controller="AlarmController">
+    <h3>Alarmail</h3>
+    <div class="panel-group">
+
+      <div class="panel panel-default">
+        <div class="panel-heading">Alarm</div>
+        <div class="panel-body">
+          <div class="form-group">
+            <label for="deviceList">Device:</label>
+            <select class="form-control" ng-options="device.name for device in devices track by device.id" ng-model="selectedDevice" ng-change="setAlarmDevice()" id="deviceList">
+            </select>
+          </div>
+          <input bs-switch type="checkbox" ng-model="alarmEnabled" ng-change="setAlarm()">
+        </div>
+      </div>
+
+      <div class="panel panel-default">
+        <div class="panel-heading">
+          Email notifications
+          <a href="#" data-toggle="popover" data-placement="right" title="Email notifications" data-content="Email account configuration for sending emails must be done by manually editing the configuration file on the server.">
+            <span class="glyphicon glyphicon-question-sign" aria-hidden="true" aria-label="Information"></span>
+          </a>
+        </div>
+        <div class="panel-body">
+          <div class="row row-grid">
+            <div class="col-xs-12 col-md-8">
+              <div class="input-group">
+                <input type="text" class="form-control" ng-model="emailNotificationAddress" placeholder="Email address">
+                <span class="input-group-btn">
+                  <button type="button" class="btn btn-primary" ng-click="setEmailNotificationAddress()">Set</button>
+                </span>
+              </div>
+            </div>
+            <div class="col-xs-6 col-md-4">
+              <input bs-switch type="checkbox" ng-model="emailNotificationEnabled" ng-change="setEmailNotificationEnabled()">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel panel-default">
+        <div class="panel-heading">NMA notifications</div>
+        <div class="panel-body">
+          <div class="row row-grid">
+            <div class="col-xs-12 col-md-8">
+              <div class="input-group">
+                <input type="text" class="form-control" ng-model="nmaApiKey" placeholder="NMA API key">
+                <span class="input-group-btn">
+                  <button type="button" class="btn btn-primary" ng-click="setNmaApiKey()">Set</button>
+                </span>
+              </div>
+            </div>
+            <div class="col-xs-6 col-md-4">
+              <input bs-switch type="checkbox" ng-model="nmaEnabled" ng-change="setNmaEnabled()">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel panel-default">
+        <div class="panel-heading">Configuration file</div>
+        <div class="panel-body">
+        <button type="button" class="btn btn-primary" ng-click="saveConfiguration()">
+          <span class="glyphicon glyphicon-floppy-save" aria-hidden="true"></span> Save
+        </button>
+        </div>
+      </div>
+
+    </div>
+  </body>
+</html>

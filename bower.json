@@ -1,0 +1,26 @@
+{
+  "name": "alarmail",
+  "version": "0.0.1",
+  "authors": [
+    { "name": "Mattias S", "homepage": "https://github.com/phooey" }
+  ],
+  "description": "Simple webapp using node-telldus-core to send an email or NMA notification when a Tellstick device is enabled.",
+  "license": "MIT",
+  "private": true,
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ],
+  "dependencies": {
+    "bootstrap": "~3.3.5",
+    "angular": "~1.4.7",
+    "angular-bootstrap-switch": "~0.4.1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/phooey/alarmail.git"
+  }
+}
