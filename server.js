@@ -70,6 +70,7 @@ function getAlarmString(device) {
 }
 
 // Filtering handling
+// TODO: Separate duplicate detection per alarm device
 var lastAlarm;
 
 function isDeviceEventDuplicate() {
@@ -183,12 +184,25 @@ function serializeDevice(device) {
 }
 
 // Alarm handling
-function isAlarmedSuppressedByScript() {
-    if (!suppressScript) {
-        return false;
+function sendAlarmIfNotSuppressedByScript(device) {
+    if (!getAlarmStatus()) {
+        log.info("Alarm disabled, ignoring.");
+        return;
+    } else if (isDeviceEventDuplicate()) {
+        log.info("Duplicate alarm event detected for device " + device.id + ", ignoring.");
+        return;
+    } else if (!suppressScript) {
+        sendAlarm(device);
+        return;
     }
-    var result = shell.exec(suppressScript).code;
-    return (result == 0);
+    log.info("Running suppressScript: ", suppressScript);
+    shell.exec(suppressScript, {silent: true}, function(code, output) {
+        if (code == 0) {
+            log.info("Alarm suppressed by script.");
+        } else {
+            sendAlarm(device);
+        }
+    });
 }
 
 function getAlarmStatus() {
@@ -210,15 +224,9 @@ function isAlarmEnabled(deviceId) {
 }
 
 function sendAlarm(device) {
-    if (alarmEnabled) {
-        if (isDeviceEventDuplicate()) {
-            log.info("Duplicate alarm event detected for device " + device.id + ", ignoring.");
-            return;
-        }
-        log.info("Sending alarm.");
-        sendNMANotification(device);
-        sendEmailNotification(device);
-    }
+    log.info("Sending alarm.");
+    sendNMANotification(device);
+    sendEmailNotification(device);
 }
 
 function checkAlarm(deviceId) {
@@ -229,11 +237,7 @@ function checkAlarm(deviceId) {
             } else if (device) {
                 if (isOn(device)) {
                     log.info("Alarm device with ID " + deviceId + " turned on.");
-                    if (isAlarmedSuppressedByScript()) {
-                        log.info("Alarm suppressed by script " + suppressScript + ".");
-                    } else {
-                        sendAlarm(device);
-                    }
+                    sendAlarmIfNotSuppressedByScript(device);
                 } else {
                     log.info("Alarm device with ID " + deviceId + " turned off.");
                 }
