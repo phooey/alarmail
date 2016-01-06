@@ -103,7 +103,7 @@ function sendEmailNotification(device) {
         to: emailNotificationAddress,
         subject: 'Alarm',
         text: getAlarmString(device)
-    }
+    };
     transporter.sendMail(mailOptions, function(error, info){
         if (error) {
             return log.error("Could not send email notification: " + error);
@@ -197,7 +197,7 @@ function sendAlarmIfNotSuppressedByScript(device) {
     }
     log.info("Running suppressScript: ", suppressScript);
     shell.exec(suppressScript, {silent: true}, function(code, output) {
-        if (code == 0) {
+        if (code === 0) {
             log.info("Alarm suppressed by script.");
         } else {
             sendAlarm(device);
@@ -210,7 +210,7 @@ function getAlarmStatus() {
 }
 
 function setAlarmStatus(enabled) {
-    log.info("Setting Alarm Status to: " + enabled)
+    log.info("Setting Alarm Status to: " + enabled);
     alarmEnabled = enabled;
 }
 
@@ -262,12 +262,12 @@ function getAlarmDevice(deviceId) {
 }
 
 function addAlarmDevice(deviceId) {
-    log.info("Adding alarm for device with ID: " + deviceId)
+    log.info("Adding alarm for device with ID: " + deviceId);
     alarmDevices.push({ "deviceId": deviceId });
 }
 
 function deleteAlarmDevice(deviceId) {
-    log.info("Deleting alarm for device with ID: " + deviceId)
+    log.info("Deleting alarm for device with ID: " + deviceId);
     for (var i = 0; i < alarmDevices.length; i++) {
         if (alarmDevices[i].deviceId == deviceId) {
             return alarmDevices.splice(i, 1);
@@ -285,12 +285,12 @@ function getNmaApiKey() {
 }
 
 function setNmaEnabled(enabled) {
-    log.info("Setting NMA enabled to: " + enabled)
+    log.info("Setting NMA enabled to: " + enabled);
     nmaEnabled = enabled;
 }
 
 function setNmaApiKey(apiKey) {
-    log.info("Setting NMA API key to: " + apiKey)
+    log.info("Setting NMA API key to: " + apiKey);
     nmaApiKey = apiKey;
 }
 
@@ -303,12 +303,12 @@ function getEmailNotificationAddress() {
 }
 
 function setEmailEnabled(enabled) {
-    log.info("Setting email notifications enabled to: " + enabled)
+    log.info("Setting email notifications enabled to: " + enabled);
     emailNotificationEnabled = enabled;
 }
 
 function setEmailNotificationAddress(emailAddress) {
-    log.info("Setting email notification address to: " + emailAddress)
+    log.info("Setting email notification address to: " + emailAddress);
     emailNotificationAddress = emailAddress;
 }
 

@@ -34,12 +34,12 @@
               </div>
             </div>
             <div class="col-md-2">
-                <ul class="list-group">
-                  <li class="list-group-item" ng-repeat="device in devices" ng-if="isAlarmDevice(device.id)">
+              <ul class="list-group">
+                <li class="list-group-item" ng-repeat="device in devices" ng-if="isAlarmDevice(device.id)">
                    {{device.name}}
-                   <a class="pull-right" href="" ng-click="deleteAlarmDevice(device.id)">
+                  <a class="pull-right" href="" ng-click="deleteAlarmDevice(device.id)">
                      <span class="glyphicon glyphicon-remove"></span>
-                   </a>
+                  </a>
                 </li>
               </ul>
             </div>
