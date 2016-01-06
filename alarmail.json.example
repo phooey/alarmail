@@ -1,7 +1,8 @@
 {
   "port": 9001,
   "alarmEnabled": true,
-  "alarmDeviceID": 1,
+  "alarmDevices": [
+    { "deviceId": 1 } ],
   "nmaEnabled": false,
   "nmaApiKey": "deadc0de",
   "emailNotificationEnabled": false,
