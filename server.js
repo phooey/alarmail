@@ -15,7 +15,7 @@ app.use(bodyParser.json());
 // Default configuration values
 var DEFAULT_PORT = 9001;
 var DEFAULT_ALARM_ENABLED = false;
-var DEFAULT_ALARM_DEVICE_ID = -1;
+var DEFAULT_ALARM_DEVICES = [];
 var DEFAULT_NMA_API_KEY = "";
 var DEFAULT_NMA_ENABLED = false;
 var DEFAULT_EMAIL_NOTIFICATION_ENABLED = false;
@@ -33,7 +33,7 @@ var PORT = (process.env.PORT || opts.port || DEFAULT_PORT);
 var APP_NAME = "Alarmail";
 
 var alarmEnabled = opts.alarmEnabled || DEFAULT_ALARM_ENABLED;
-var alarmDeviceID = opts.alarmDeviceID || DEFAULT_ALARM_DEVICE_ID;
+var alarmDevices = opts.alarmDevices || DEFAULT_ALARM_DEVICES;
 var nmaEnabled = opts.nmaEnabled || DEFAULT_NMA_ENABLED;
 var nmaApiKey = opts.nmaApiKey || DEFAULT_NMA_API_KEY;
 var emailNotificationEnabled = opts.emailNotificationEnabled || DEFAULT_EMAIL_NOTIFICATION_ENABLED;
@@ -47,7 +47,7 @@ function generateConfigurationData() {
     return {
         "port": PORT,
         "alarmEnabled": alarmEnabled,
-        "alarmDeviceID": alarmDeviceID,
+        "alarmDevices": alarmDevices,
         "nmaEnabled": nmaEnabled,
         "nmaApiKey": nmaApiKey,
         "emailNotificationEnabled": emailNotificationEnabled,
@@ -178,8 +178,7 @@ function serializeDevices(devices) {
 function serializeDevice(device) {
     return {
         id:   device.id,
-        name: device.name,
-        alarmEnabled: isAlarmEnabled(device)
+        name: device.name
     };
 }
 
@@ -201,8 +200,13 @@ function setAlarmStatus(enabled) {
     alarmEnabled = enabled;
 }
 
-function isAlarmEnabled(device) {
-    return (device.id == alarmDeviceID);
+function isAlarmEnabled(deviceId) {
+    for (var i = 0; i < alarmDevices.length; i++) {
+        if (alarmDevices[i].deviceId == deviceId) {
+            return true;
+        }
+    }
+    return false;
 }
 
 function sendAlarm(device) {
@@ -218,31 +222,54 @@ function sendAlarm(device) {
 }
 
 function checkAlarm(deviceId) {
-    if (deviceId == alarmDeviceID) {
-        getDevice(alarmDeviceID, function (error, device) {
+    if (isAlarmEnabled(deviceId)) {
+        getDevice(deviceId, function (error, device) {
             if (error) {
-                log.error("Could not find Alarm device", error);
+                log.error("Could not find Alarm device with ID " + deviceId, error);
             } else if (device) {
                 if (isOn(device)) {
-                    log.info("Alarm device turned on.");
+                    log.info("Alarm device with ID " + deviceId + " turned on.");
                     if (isAlarmedSuppressedByScript()) {
                         log.info("Alarm suppressed by script " + suppressScript + ".");
                     } else {
                         sendAlarm(device);
                     }
                 } else {
-                    log.info("Alarm device turned off.");
+                    log.info("Alarm device with ID " + deviceId + " turned off.");
                 }
             } else {
-                log.error("Could not find Alarm device, weird.");
+                log.error("Could not find Alarm device with ID " + deviceId + ", weird.");
             }
         });
     }
 }
 
-function setAlarmDevice(device) {
-    log.info("Setting Alarm Device ID to: " + device.id)
-    alarmDeviceID = device.id;
+function getAlarmDevices() {
+    return alarmDevices;
+}
+
+function getAlarmDevice(deviceId) {
+    for (var i = 0; i < alarmDevices.length; i++) {
+        if (alarmDevices[i].deviceId == deviceId) {
+            return alarmDevices[i];
+        }
+    }
+    return null;
+}
+
+function addAlarmDevice(deviceId) {
+    log.info("Adding alarm for device with ID: " + deviceId)
+    alarmDevices.push({ "deviceId": deviceId });
+}
+
+function deleteAlarmDevice(deviceId) {
+    log.info("Deleting alarm for device with ID: " + deviceId)
+    for (var i = 0; i < alarmDevices.length; i++) {
+        if (alarmDevices[i].deviceId == deviceId) {
+            return alarmDevices.splice(i, 1);
+        }
+    }
+    return null;
 }
 
 function isNmaEnabled() {
@@ -372,6 +399,29 @@ app.route('/alarm/email/enabled')
         res.sendStatus(200);
     });
 
+app.get('/alarm/devices/', function(req, res) {
+    res.send(getAlarmDevices());
+});
+
+app.route('/alarm/devices/:device/')
+    .get(function(req, res) {
+        var deviceId = parseDeviceId(req.params.device);
+        res.json(getAlarmDevice(deviceId));
+    })
+    .put(function(req, res) {
+        var deviceId = parseDeviceId(req.params.device);
+        addAlarmDevice(deviceId);
+        res.send(200);
+    })
+    .delete(function(req, res) {
+        var deviceId = parseDeviceId(req.params.device);
+        if (deleteAlarmDevice(deviceId)) {
+            res.sendStatus(200);
+        } else {
+            res.sendStatus(500);
+        }
+    });
+
 app.put('/configuration/', function(req, res) {
     saveConfigurationToFile(function (error, device) {
         if (error) {
@@ -406,43 +456,6 @@ app.get('/devices/:device/', function(req, res) {
         }
     });
 });
-
-/* TODO: Remove alarm route when supporting multiple devices and set
- *       alarmEnabled as property on devices instead using PUT */
-app.route('/devices/:device/alarm/')
-    .get(function(req, res) {
-        var deviceId = parseDeviceId(req.params.device);
-        getDevice(deviceId, function (error, device) {
-            if (error) {
-                log.error("Could not find device to get alarm: " + error);
-                res.sendStatus(500);
-            } else if (device) {
-                res.send({
-                    "enabled" : isAlarmEnabled(device)
-                });
-            } else {
-                res.sendStatus(404);
-            }
-        });
-    })
-    .put(function(req, res) {
-        if (req.body.enabled == true) {
-            var deviceId = parseDeviceId(req.params.device);
-            getDevice(deviceId, function (error, device) {
-                if (error) {
-                    log.error("Could not find device to set alarm: " + error);
-                    res.sendStatus(500);
-                } else if (device) {
-                    setAlarmDevice(device);
-                    res.sendStatus(200);
-                } else {
-                    res.sendStatus(404);
-                }
-            });
-        } else {
-            res.sendStatus(200);
-        }
-    });
 
 // Serve static files from public/
 app.use(express.static(__dirname + '/public'));

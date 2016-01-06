@@ -14,14 +14,36 @@
     <div class="panel-group">
 
       <div class="panel panel-default">
-        <div class="panel-heading">Alarm</div>
+        <div class="panel-heading">Alarms</div>
         <div class="panel-body">
-          <div class="form-group">
-            <label for="deviceList">Device:</label>
-            <select class="form-control" ng-options="device.name for device in devices track by device.id" ng-model="selectedDevice" ng-change="setAlarmDevice()" id="deviceList">
-            </select>
+          <div class="row row-grid">
+            <div class="col-md-2">
+              <input bs-switch type="checkbox" ng-model="alarmEnabled" ng-change="setAlarm()">
+            </div>
+            <div class="col-md-2">
+              <div class="dropdown">
+                <button class="btn btn-default dropdown-toggle" type="button" id="deviceDropdown" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                  Add device
+                  <span class="caret"></span>
+                </button>
+                <ul class="dropdown-menu" aria-labelledby="deviceDropdown">
+                  <li ng-repeat="device in devices" ng-if="!isAlarmDevice(device.id)">
+                    <a ng-click="addAlarmDevice(device.id)">{{device.name}}</a>
+                  </li>
+                </ul>
+              </div>
+            </div>
+            <div class="col-md-2">
+                <ul class="list-group">
+                  <li class="list-group-item" ng-repeat="device in devices" ng-if="isAlarmDevice(device.id)">
+                   {{device.name}}
+                   <a class="pull-right" href="" ng-click="deleteAlarmDevice(device.id)">
+                     <span class="glyphicon glyphicon-remove"></span>
+                   </a>
+                </li>
+              </ul>
+            </div>
           </div>
-          <input bs-switch type="checkbox" ng-model="alarmEnabled" ng-change="setAlarm()">
         </div>
       </div>
 

@@ -8,13 +8,6 @@ alarmail.controller('AlarmController', ['$scope', '$http',
 
     $http.get('devices/').success(function(data) {
       $scope.devices = data;
-
-      for (var i = 0; i < $scope.devices.length; i++) {
-        if ($scope.devices[i].alarmEnabled) {
-          $scope.selectedDevice = $scope.devices[i];
-          break;
-        }
-      }
     });
 
     $http.get('alarm/').success(function(data) {
@@ -22,18 +15,52 @@ alarmail.controller('AlarmController', ['$scope', '$http',
       $scope.alarmEnabled = data.enabled;
     });
 
-    $http.get('alarm/nma/').success(function(data) {
-      $scope.nmaEnabled = data.enabled;
-      $scope.nmaApiKey = data.apiKey;
-    });
+    $scope.getAlarmDevices = function() {
+      $http.get('alarm/devices').success(function(data) {
+        $scope.alarmDevices = data;
+      });
+    };
+
+    $scope.getAlarmDevices();
 
     $http.get('alarm/email/').success(function(data) {
       $scope.emailNotificationEnabled = data.enabled;
       $scope.emailNotificationAddress = data.emailNotificationAddress;
     });
 
-    $scope.setAlarmDevice = function() {
-      $http.put('devices/' + $scope.selectedDevice.id + "/alarm/", { 'enabled': true });
+    $http.get('alarm/nma/').success(function(data) {
+      $scope.nmaEnabled = data.enabled;
+      $scope.nmaApiKey = data.apiKey;
+    });
+
+    $scope.addAlarmDevice = function(deviceId) {
+      $http.put('alarm/devices/' + deviceId, { 'deviceId': deviceId }
+      ).then(function successCallback(response) {
+          $scope.getAlarmDevices();
+        }, function errorCallback(response) {
+          // TODO: Handle error
+        });
+    };
+
+    $scope.deleteAlarmDevice = function(deviceId) {
+      $http.delete('alarm/devices/' + deviceId
+      ).then(function successCallback(response) {
+          $scope.getAlarmDevices();
+        }, function errorCallback(response) {
+          // TODO: Handle error
+        });
+    };
+
+    $scope.isAlarmDevice = function(deviceId) {
+      if ($scope.alarmDevices === undefined) {
+        return false;
+      }
+      for (var i = 0; i < $scope.alarmDevices.length; i++) {
+        if ($scope.alarmDevices[i].deviceId == deviceId) {
+          return true;
+        }
+      }
+      return false;
     };
 
     $scope.setAlarm = function () {
