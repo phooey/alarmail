@@ -179,7 +179,8 @@ function serializeDevices(devices) {
 function serializeDevice(device) {
     return {
         id:   device.id,
-        name: device.name
+        name: device.name,
+        on: (device.lastSentCommand === td.TURNON)
     };
 }
 
@@ -315,7 +316,7 @@ function setEmailNotificationAddress(emailAddress) {
 // Alarm REST API
 app.route('/alarm')
     .get(function(req, res) {
-        res.send({"enabled" : getAlarmStatus()});
+        res.json({"enabled" : getAlarmStatus()});
     })
     .put(function(req, res) {
         var enabled = req.body.enabled;
@@ -325,7 +326,7 @@ app.route('/alarm')
 
 app.route('/alarm/nma/')
     .get(function(req, res) {
-        res.send({
+        res.json({
             "enabled" : isNmaEnabled(),
             "apiKey": getNmaApiKey()
         });
@@ -341,7 +342,7 @@ app.route('/alarm/nma/')
 
 app.route('/alarm/nma/apiKey')
     .get(function(req, res) {
-        res.send({
+        res.json({
             "apiKey": getNmaApiKey()
         });
     })
@@ -353,7 +354,7 @@ app.route('/alarm/nma/apiKey')
 
 app.route('/alarm/nma/enabled')
     .get(function(req, res) {
-        res.send({
+        res.json({
             "enabled" : isNmaEnabled()
         });
     })
@@ -365,7 +366,7 @@ app.route('/alarm/nma/enabled')
 
 app.route('/alarm/email/')
     .get(function(req, res) {
-        res.send({
+        res.json({
             "enabled" : isEmailNotificationEnabled(),
             "emailNotificationAddress": getEmailNotificationAddress()
         });
@@ -381,7 +382,7 @@ app.route('/alarm/email/')
 
 app.route('/alarm/email/address')
     .get(function(req, res) {
-        res.send({
+        res.json({
             "emailNotificationAddress": getEmailNotificationAddress()
         });
     })
@@ -393,7 +394,7 @@ app.route('/alarm/email/address')
 
 app.route('/alarm/email/enabled')
     .get(function(req, res) {
-        res.send({
+        res.json({
             "enabled" : isEmailNotificationEnabled()
         });
     })
@@ -404,7 +405,7 @@ app.route('/alarm/email/enabled')
     });
 
 app.get('/alarm/devices/', function(req, res) {
-    res.send(getAlarmDevices());
+    res.json(getAlarmDevices());
 });
 
 app.route('/alarm/devices/:device/')
@@ -415,7 +416,7 @@ app.route('/alarm/devices/:device/')
     .put(function(req, res) {
         var deviceId = parseDeviceId(req.params.device);
         addAlarmDevice(deviceId);
-        res.send(200);
+        res.sendStatus(200);
     })
     .delete(function(req, res) {
         var deviceId = parseDeviceId(req.params.device);
@@ -429,7 +430,7 @@ app.route('/alarm/devices/:device/')
 app.put('/configuration/', function(req, res) {
     saveConfigurationToFile(function (error, device) {
         if (error) {
-            log.error("Could not save configuration to file: " + error);
+            log.error("Could not save configuration to file: ", error);
             res.sendStatus(500);
         } else {
             res.sendStatus(200);
@@ -443,7 +444,7 @@ app.get('/devices/', function(req, res) {
         if (error) {
             res.sendStatus(500);
         } else {
-            res.send(serializeDevices(devices));
+            res.json(serializeDevices(devices));
         }
     });
 });
@@ -454,7 +455,7 @@ app.get('/devices/:device/', function(req, res) {
         if (error) {
             res.sendStatus(500);
         } else if (device) {
-            res.send(serializeDevice(device));
+            res.json(serializeDevice(device));
         } else {
             res.sendStatus(404);
         }
