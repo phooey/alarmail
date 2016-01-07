@@ -36,12 +36,14 @@
             <div class="col-md-2">
               <ul class="list-group">
                 <li class="list-group-item" ng-repeat="device in devices" ng-if="isAlarmDevice(device.id)">
-                  <span ng-if="device.on==true" style="color: #009900" class="glyphicon glyphicon-off"></span>
-                  <span ng-if="device.on==false" style="color: #303030" class="glyphicon glyphicon-off"></span>
-                  &nbsp;{{device.name}}
-                  <a class="pull-right" href="" ng-click="deleteAlarmDevice(device.id)">
-                    <span class="glyphicon glyphicon-remove"></span>
-                  </a>
+                  <h5 style="margin-top: 0; margin-bottom: 0;">
+                    <span ng-if="device.on==true" style="color: #009900" class="glyphicon glyphicon-off"></span>
+                    <span ng-if="device.on==false" style="color: #303030" class="glyphicon glyphicon-off"></span>
+                    &nbsp;{{device.name}} <small><i>Last on: {{getFormattedLastOnForAlarmDevice(device.id);}}</i></small>
+                    <a class="pull-right" href="" ng-click="deleteAlarmDevice(device.id)">
+                      <span class="glyphicon glyphicon-remove"></span>
+                    </a>
+                  </h5>
                 </li>
               </ul>
             </div>

@@ -51,6 +51,32 @@ alarmail.controller('AlarmController', ['$scope', '$http',
         });
     };
 
+    $scope.getAlarmDevice = function(deviceId) {
+      for (var i = 0; i < $scope.alarmDevices.length; i++) {
+        if ($scope.alarmDevices[i].deviceId == deviceId) {
+          return $scope.alarmDevices[i];
+        }
+      }
+      return null;
+    };
+
+    $scope.getLastOnForAlarmDevice = function(deviceId) {
+      var alarmDevice = $scope.getAlarmDevice(deviceId);
+      if (alarmDevice) {
+          return alarmDevice.lastOn;
+      }
+      return "N/A";
+    };
+
+    $scope.getFormattedLastOnForAlarmDevice = function(deviceId) {
+      var lastOn = $scope.getLastOnForAlarmDevice(deviceId);
+      if (lastOn !== "N/A") {
+          var d = new Date(lastOn);
+          lastOn = d.toLocaleString();
+      }
+      return lastOn;
+    };
+
     $scope.isAlarmDevice = function(deviceId) {
       if ($scope.alarmDevices === undefined) {
         return false;

@@ -70,17 +70,14 @@ function getAlarmString(device) {
 }
 
 // Filtering handling
-// TODO: Separate duplicate detection per alarm device
-var lastAlarm;
-
-function isDeviceEventDuplicate() {
+function isDeviceEventDuplicate(alarmDevice) {
     var now = moment();
     var duplicate = false;
-    if (lastAlarm) {
-        duplicate = (now.diff(lastAlarm, 'seconds') < filterTimeSeconds);
+    if (alarmDevice.lastOn) {
+        duplicate = (now.diff(alarmDevice.lastOn, 'seconds') < filterTimeSeconds);
     }
     if (!duplicate) {
-        lastAlarm = now;
+        alarmDevice.lastOn = now;
     }
     return duplicate;
 }
@@ -186,24 +183,25 @@ function serializeDevice(device) {
 
 // Alarm handling
 function sendAlarmIfNotSuppressedByScript(device) {
+    var alarmDevice = getAlarmDevice(device.id);
+    var duplicateDeviceEvent = isDeviceEventDuplicate(alarmDevice);
+    updateLastOnForAlarmDevice(alarmDevice);
     if (!getAlarmStatus()) {
         log.info("Alarm disabled, ignoring.");
-        return;
-    } else if (isDeviceEventDuplicate()) {
+    } else if (duplicateDeviceEvent) {
         log.info("Duplicate alarm event detected for device " + device.id + ", ignoring.");
-        return;
     } else if (!suppressScript) {
         sendAlarm(device);
-        return;
+    } else {
+        log.info("Running suppressScript: ", suppressScript);
+        shell.exec(suppressScript, {silent: true}, function(code, output) {
+            if (code === 0) {
+                log.info("Alarm suppressed by script.");
+            } else {
+                sendAlarm(device);
+            }
+        });
     }
-    log.info("Running suppressScript: ", suppressScript);
-    shell.exec(suppressScript, {silent: true}, function(code, output) {
-        if (code === 0) {
-            log.info("Alarm suppressed by script.");
-        } else {
-            sendAlarm(device);
-        }
-    });
 }
 
 function getAlarmStatus() {
@@ -249,6 +247,18 @@ function checkAlarm(deviceId) {
     }
 }
 
+function serializeAlarmDevices(alarmDevices) {
+    return alarmDevices.map(serializeAlarmDevice);
+}
+
+function serializeAlarmDevice(alarmDevice) {
+   var lastOn = (alarmDevice.lastOn) ? alarmDevice.lastOn.format() : "N/A";
+    return {
+        "deviceId": alarmDevice.deviceId,
+        "lastOn":   lastOn
+    };
+}
+
 function getAlarmDevices() {
     return alarmDevices;
 }
@@ -275,6 +285,11 @@ function deleteAlarmDevice(deviceId) {
         }
     }
     return null;
+}
+
+function updateLastOnForAlarmDevice(alarmDevice) {
+    log.info("Updating lastOn for alarmDevice with id: ", alarmDevice.deviceId);
+    alarmDevice.lastOn = moment();
 }
 
 function isNmaEnabled() {
@@ -405,13 +420,13 @@ app.route('/alarm/email/enabled')
     });
 
 app.get('/alarm/devices/', function(req, res) {
-    res.json(getAlarmDevices());
+    res.json(serializeAlarmDevices(getAlarmDevices()));
 });
 
 app.route('/alarm/devices/:device/')
     .get(function(req, res) {
         var deviceId = parseDeviceId(req.params.device);
-        res.json(getAlarmDevice(deviceId));
+        res.json(serializeAlarmDevice(getAlarmDevice(deviceId)));
     })
     .put(function(req, res) {
         var deviceId = parseDeviceId(req.params.device);
