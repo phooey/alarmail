@@ -34,6 +34,12 @@ exports.config =
         afterBrunch: [
             [
                 'mkdir -p public/fonts',
-                'cp bower_components/bootstrap/fonts/* public/fonts'
+                'cp bower_components/bootstrap/fonts/* public/fonts',
+                'htmlhint static/*.html'
             ].join(' && ')
         ]
+        jshint:
+            options:
+                curly: true
+            pattern: /^js[\\\/].*\.js$/
+

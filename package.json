@@ -5,7 +5,8 @@
   "main": "server.js",
   "scripts": {
     "postinstall": "bower cache clean && bower install && brunch build",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "lint": "jshint **.js"
   },
   "author": {
     "name": "Mattias S",
@@ -19,7 +20,10 @@
     "config-file": "~0.3.1",
     "css-brunch": "^1.7.0",
     "express": "~4.13.3",
+    "htmlhint": "^0.9.12",
     "javascript-brunch": "^1.8.0",
+    "jshint": "^2.8.0",
+    "jshint-brunch": "^1.8.0",
     "less-brunch": "^1.8.1",
     "log4js": "~0.6.27",
     "moment": "~2.10.6",
