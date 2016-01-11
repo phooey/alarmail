@@ -14,6 +14,14 @@
     <div class="panel-group">
 
       <div class="panel panel-default">
+
+        <div ng-repeat="alert in alerts">
+          <div class="alert {{alert.type}}">
+            <a href="#" class="close" ng-click="closeAlert($index)" data-dismiss="alert" aria-label="close">&times;</a>
+            <strong>{{alert.title}}</strong> {{alert.message}}
+          </div>
+        </div>
+
         <div class="panel-heading">Alarms</div>
         <div class="panel-body">
           <div class="row row-grid">
@@ -33,7 +41,7 @@
                 </ul>
               </div>
             </div>
-            <div class="col-md-2">
+            <div class="col-md-8">
               <ul class="list-group">
                 <li class="list-group-item" ng-repeat="device in devices" ng-if="isAlarmDevice(device.id)">
                   <h5 style="margin-top: 0; margin-bottom: 0;">

@@ -44,10 +44,13 @@ var filterDuplicateEvents = DEFAULT_FILTERING_ENABLED;
 var filterTimeSeconds = DEFAULT_FILTERING_SECONDS;
 
 function generateConfigurationData() {
+    var alarmDevicesConfig = alarmDevices.map(function (alarmDevice) {
+     return { "deviceId": alarmDevice.deviceId };
+    });
     return {
         "port": PORT,
         "alarmEnabled": alarmEnabled,
-        "alarmDevices": alarmDevices,
+        "alarmDevices": alarmDevicesConfig,
         "nmaEnabled": nmaEnabled,
         "nmaApiKey": nmaApiKey,
         "emailNotificationEnabled": emailNotificationEnabled,

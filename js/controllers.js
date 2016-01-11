@@ -33,12 +33,26 @@ alarmail.controller('AlarmController', ['$scope', '$http',
       $scope.nmaApiKey = data.apiKey;
     });
 
+    $scope.alerts = [];
+
+    $scope.addAlert = function(type, title, message) {
+      $scope.alerts.push({type: type, title: title, message: message});
+    };
+
+    $scope.addErrorAlert = function(message) {
+      $scope.addAlert("alert-danger", "Error!", message);
+    };
+
+    $scope.removeAlert = function(index) {
+      $scope.alerts.splice(index, 1);
+    };
+
     $scope.addAlarmDevice = function(deviceId) {
       $http.put('alarm/devices/' + deviceId, { 'deviceId': deviceId }
       ).then(function successCallback(response) {
           $scope.getAlarmDevices();
         }, function errorCallback(response) {
-          // TODO: Handle error
+          $scope.addErrorAlert("Could not add alarm device.");
         });
     };
 
@@ -47,7 +61,7 @@ alarmail.controller('AlarmController', ['$scope', '$http',
       ).then(function successCallback(response) {
           $scope.getAlarmDevices();
         }, function errorCallback(response) {
-          // TODO: Handle error
+          $scope.addErrorAlert("Could not remove alarm device.");
         });
     };
 
@@ -91,31 +105,68 @@ alarmail.controller('AlarmController', ['$scope', '$http',
 
     $scope.setAlarm = function () {
       var enabled = $scope.alarmEnabled;
-      $http.put('alarm/', { 'enabled': enabled });
+      $http.put('alarm/', { 'enabled': enabled }
+        ).then(function successCallback(response) {
+          // Do nothing
+        }, function errorCallback(response) {
+          var enable = $scope.alarmEnabled ? "enable" : "disable";
+          $scope.alarmEnabled = !$scope.alarmEnabled;
+          $scope.addErrorAlert("Could not " + enable + " alarm.");
+        });
     };
 
     $scope.setNmaEnabled = function () {
       var enabled = $scope.nmaEnabled;
-      $http.put('alarm/nma/enabled/', { "enabled": enabled });
+      $http.put('alarm/nma/enabled/', { "enabled": enabled }
+        ).then(function successCallback(response) {
+          // Do nothing
+        }, function errorCallback(response) {
+          var enable = $scope.nmaEnabled ? "enable" : "disable";
+          $scope.nmaEnabled = !$scope.nmaEnabled;
+          $scope.addErrorAlert("Could not " + enable + " NMA notifications.");
+        });
     };
 
     $scope.setNmaApiKey = function () {
       var apiKey = $scope.nmaApiKey;
-      $http.put('alarm/nma/apikey/', { "apiKey": apiKey });
+      $http.put('alarm/nma/apikey/', { "apiKey": apiKey }
+        ).then(function successCallback(response) {
+          // Do nothing
+        }, function errorCallback(response) {
+          $scope.addErrorAlert("Could not set NMA API key.");
+        });
     };
 
     $scope.setEmailNotificationEnabled = function () {
       var enabled = $scope.emailNotificationEnabled;
-      $http.put('alarm/email/enabled/', { "enabled": enabled });
+      $http.put('alarm/email/enabled/', { "enabled": enabled }
+        ).then(function successCallback(response) {
+          // Do nothing
+        }, function errorCallback(response) {
+          var enable = $scope.emailNotificationEnabled ? "enable" : "disable";
+          $scope.emailNotificationEnabled = !$scope.emailNotificationEnabled;
+          $scope.addErrorAlert("Could not " + enable + " email notifications.");
+        });
     };
 
     $scope.setEmailNotificationAddress= function () {
       var emailNotificationAddress = $scope.emailNotificationAddress;
-      $http.put('alarm/email/address/', { "emailNotificationAddress": emailNotificationAddress });
+      $http.put('alarm/email/address/',
+        { "emailNotificationAddress": emailNotificationAddress }
+        ).then(function successCallback(response) {
+          // Do nothing
+        }, function errorCallback(response) {
+          $scope.addErrorAlert("Could not set email notification address.");
+        });
     };
 
     $scope.saveConfiguration= function () {
-      $http.put('configuration/');
+      $http.put('configuration/'
+        ).then(function successCallback(response) {
+          // Do nothing
+        }, function errorCallback(response) {
+          $scope.addErrorAlert("Could not save configuration.");
+        });
     };
   }
 ]);
