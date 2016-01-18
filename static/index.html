@@ -10,18 +10,17 @@
     <script src="js/app.js"></script>
   </head>
   <body ng-controller="AlarmController">
-    <h3>Alarmail</h3>
+    <h3>&nbsp;Alarmail</h3>
+
+    <div ng-repeat="alert in alerts">
+      <div class="alert {{alert.type}}">
+        <a href="#" class="close" ng-click="closeAlert($index)" data-dismiss="alert" aria-label="close">&times;</a>
+          <strong>{{alert.title}}</strong> {{alert.message}}
+      </div>
+    </div>
+
     <div class="panel-group">
-
       <div class="panel panel-default">
-
-        <div ng-repeat="alert in alerts">
-          <div class="alert {{alert.type}}">
-            <a href="#" class="close" ng-click="closeAlert($index)" data-dismiss="alert" aria-label="close">&times;</a>
-            <strong>{{alert.title}}</strong> {{alert.message}}
-          </div>
-        </div>
-
         <div class="panel-heading">Alarms</div>
         <div class="panel-body">
           <div class="row row-grid">
@@ -42,7 +41,7 @@
               </div>
             </div>
             <div class="col-md-8">
-              <ul class="list-group">
+              <ul class="list-group" style="margin-top: 0; margin-bottom: 0;">
                 <li class="list-group-item" ng-repeat="device in devices" ng-if="isAlarmDevice(device.id)">
                   <h5 style="margin-top: 0; margin-bottom: 0;">
                     <span ng-if="device.on==true" style="color: #009900" class="glyphicon glyphicon-off"></span>
@@ -68,7 +67,7 @@
         </div>
         <div class="panel-body">
           <div class="row row-grid">
-            <div class="col-xs-12 col-md-8">
+            <div class="col-xs-12 col-sm-9">
               <div class="input-group">
                 <input type="text" class="form-control" ng-model="emailNotificationAddress" placeholder="Email address">
                 <span class="input-group-btn">
@@ -76,7 +75,7 @@
                 </span>
               </div>
             </div>
-            <div class="col-xs-6 col-md-4">
+            <div class="col-xs-3 col-sm-3">
               <input bs-switch type="checkbox" ng-model="emailNotificationEnabled" ng-change="setEmailNotificationEnabled()">
             </div>
           </div>
@@ -87,7 +86,7 @@
         <div class="panel-heading">NMA notifications</div>
         <div class="panel-body">
           <div class="row row-grid">
-            <div class="col-xs-12 col-md-8">
+            <div class="col-xs-12 col-sm-9">
               <div class="input-group">
                 <input type="text" class="form-control" ng-model="nmaApiKey" placeholder="NMA API key">
                 <span class="input-group-btn">
@@ -95,7 +94,7 @@
                 </span>
               </div>
             </div>
-            <div class="col-xs-6 col-md-4">
+            <div class="col-xs-3 col-sm-3">
               <input bs-switch type="checkbox" ng-model="nmaEnabled" ng-change="setNmaEnabled()">
             </div>
           </div>
