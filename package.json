@@ -4,9 +4,10 @@
   "description": "Simple webapp using node-telldus-core to send an email or NMA notification when a Tellstick device is enabled.",
   "main": "server.js",
   "scripts": {
+    "lint": "jshint **.js",
+    "start-mock": "node server.js --mock",
     "postinstall": "bower cache clean && bower install && brunch build",
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "lint": "jshint **.js"
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": {
     "name": "Mattias S",
@@ -26,11 +27,12 @@
     "jshint-brunch": "^1.8.0",
     "less-brunch": "^1.8.1",
     "log4js": "~0.6.27",
+    "minimist": "^1.2.0",
     "moment": "~2.10.6",
     "nma": "~0.2.2",
     "nodemailer": "~1.10.0",
     "shelljs": "~0.5.3",
-    "telldus-core": "git+ssh://git@github.com:mikwae/node-telldus-core.git"
+    "telldus-core": "git+https://github.com/mikwae/node-telldus-core.git"
   },
   "repository": {
     "type": "git",
