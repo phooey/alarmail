@@ -1,11 +1,14 @@
 {
   "port": 9001,
-  "alarmEnabled": true,
-  "alarmDevices": [
-    {
-      "deviceId": 1
-    }
-  ],
+  "alarm": {
+    "enabled": true,
+    "devices": [
+      {
+        "deviceId": 1
+      }
+    ],
+    "suppressScript": ""
+  },
   "nma": {
     "enabled": false,
     "apiKey": "deadc0de"

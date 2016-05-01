@@ -7,17 +7,13 @@ var td = argv.mock ? require('./lib/mock-telldus.js')({numDevices: 3}) : require
 var config = require('config-file');
 var fs = require('fs');
 var moment = require('moment');
-var shell = require('shelljs');
 var bodyParser = require('body-parser');
 app.use(bodyParser.json());
 
 // Default configuration values
 var DEFAULT_PORT = 9001;
-var DEFAULT_ALARM_ENABLED = false;
-var DEFAULT_ALARM_DEVICES = [];
 var DEFAULT_FILTERING_ENABLED = true;
 var DEFAULT_FILTERING_SECONDS = 5;
-var DEFAULT_SUPPRESS_SCRIPT = "";
 
 // Configuration handling
 var CONFIGURATION_FILE_NAME = "alarmail.json";
@@ -35,23 +31,18 @@ var emailHandler = new EmailHandler(log, opts);
 var NMAHandler = require('./lib/nma-handler.js');
 var nmaHandler = new NMAHandler(log, opts);
 
-var alarmEnabled = opts.alarmEnabled || DEFAULT_ALARM_ENABLED;
-var alarmDevices = opts.alarmDevices || DEFAULT_ALARM_DEVICES;
-var suppressScript = opts.suppressScript || DEFAULT_SUPPRESS_SCRIPT;
+var AlarmHandler = require('./lib/alarm-handler.js');
+var alarmHandler = new AlarmHandler(log, opts, [emailHandler, nmaHandler]);
+
 var filterDuplicateEvents = DEFAULT_FILTERING_ENABLED;
 var filterTimeSeconds = DEFAULT_FILTERING_SECONDS;
 
 function generateConfigurationData() {
-    var alarmDevicesConfig = alarmDevices.map(function (alarmDevice) {
-     return { "deviceId": alarmDevice.deviceId };
-    });
     return {
         "port": PORT,
-        "alarmEnabled": alarmEnabled,
-        "alarmDevices": alarmDevicesConfig,
+        "alarm": alarmHandler.generateConfiguration(),
         "nma": nmaHandler.generateConfiguration(),
         "email": emailHandler.generateConfiguration(),
-        "suppressScript": suppressScript
     };
 }
 
@@ -59,12 +50,6 @@ function saveConfigurationToFile(callback) {
     configurationData = JSON.stringify(generateConfigurationData(), null, "  ");
     log.info("Saving configuration to file: " + configurationData);
     fs.writeFile(CONFIGURATION_FILE_NAME, configurationData, "utf8", callback);
-}
-
-// Helper functions
-function getAlarmString(device) {
-    return moment().format("YYYY-MM-DD HH:mm:ss") + ": Device \"" + device.name + "\" with id " +
-        device.id + " just turned on.";
 }
 
 // Filtering handling
@@ -123,71 +108,42 @@ function serializeDevice(device) {
     return {
         id:   device.id,
         name: device.name,
-        on: (device.lastSentCommand === td.TURNON)
+        on:   (device.lastSentCommand === td.TURNON)
+    };
+}
+
+// Helper functions
+function getAlarmData(device) {
+    var alarmText = moment().format("YYYY-MM-DD HH:mm:ss") + ": Device \"" + device.name + "\" with id " +
+        device.id + " just turned on.";
+    return {
+        title: APP_NAME,
+        subject: "Alarm",
+        text: alarmText
     };
 }
 
 // Alarm handling
-function sendAlarmIfNotSuppressedByScript(device) {
-    var alarmDevice = getAlarmDevice(device.id);
+function sendAlarmIfNotDuplicateEvent(device) {
+    var alarmDevice = alarmHandler.getDevice(device.id);
     var duplicateDeviceEvent = isDeviceEventDuplicate(alarmDevice);
-    updateLastOnForAlarmDevice(alarmDevice);
-    if (!getAlarmStatus()) {
-        log.info("Alarm disabled, ignoring.");
-    } else if (duplicateDeviceEvent) {
+    alarmHandler.setLastOnForDevice(alarmDevice.deviceId);
+    if (duplicateDeviceEvent) {
         log.info("Duplicate alarm event detected for device " + device.id + ", ignoring.");
-    } else if (!suppressScript) {
-        sendAlarm(device);
     } else {
-        log.info("Running suppressScript: ", suppressScript);
-        shell.exec(suppressScript, {silent: true}, function(code, output) {
-            if (code === 0) {
-                log.info("Alarm suppressed by script.");
-            } else {
-                sendAlarm(device);
-            }
-        });
+        alarmHandler.handleAlarm(getAlarmData(device));
     }
-}
-
-function getAlarmStatus() {
-    return alarmEnabled;
-}
-
-function setAlarmStatus(enabled) {
-    log.info("Setting Alarm Status to: " + enabled);
-    alarmEnabled = enabled;
-}
-
-function isAlarmEnabled(deviceId) {
-    for (var i = 0; i < alarmDevices.length; i++) {
-        if (alarmDevices[i].deviceId == deviceId) {
-            return true;
-        }
-    }
-    return false;
-}
-
-function sendAlarm(device) {
-    log.info("Sending alarm.");
-    var alarmData = {
-        title: APP_NAME,
-        subject: "Alarm",
-        text: getAlarmString(device)
-    }
-    emailHandler.sendNotification(alarmData);
-    nmaHandler.sendNotification(alarmData);
 }
 
 function checkAlarm(deviceId) {
-    if (isAlarmEnabled(deviceId)) {
+    if (alarmHandler.isAlarmEnabledForDevice(deviceId)) {
         getDevice(deviceId, function (error, device) {
             if (error) {
                 log.error("Could not find Alarm device with ID " + deviceId, error);
             } else if (device) {
                 if (isOn(device)) {
                     log.info("Alarm device with ID " + deviceId + " turned on.");
-                    sendAlarmIfNotSuppressedByScript(device);
+                    sendAlarmIfNotDuplicateEvent(device);
                 } else {
                     log.info("Alarm device with ID " + deviceId + " turned off.");
                 }
@@ -198,62 +154,41 @@ function checkAlarm(deviceId) {
     }
 }
 
-function serializeAlarmDevices(alarmDevices) {
-    return alarmDevices.map(serializeAlarmDevice);
-}
-
-function serializeAlarmDevice(alarmDevice) {
-   var lastOn = (alarmDevice.lastOn) ? alarmDevice.lastOn.format() : "N/A";
-    return {
-        "deviceId": alarmDevice.deviceId,
-        "lastOn":   lastOn
-    };
-}
-
-function getAlarmDevices() {
-    return alarmDevices;
-}
-
-function getAlarmDevice(deviceId) {
-    for (var i = 0; i < alarmDevices.length; i++) {
-        if (alarmDevices[i].deviceId == deviceId) {
-            return alarmDevices[i];
-        }
-    }
-    return null;
-}
-
-function addAlarmDevice(deviceId) {
-    log.info("Adding alarm for device with ID: " + deviceId);
-    alarmDevices.push({ "deviceId": deviceId });
-}
-
-function deleteAlarmDevice(deviceId) {
-    log.info("Deleting alarm for device with ID: " + deviceId);
-    for (var i = 0; i < alarmDevices.length; i++) {
-        if (alarmDevices[i].deviceId == deviceId) {
-            return alarmDevices.splice(i, 1);
-        }
-    }
-    return null;
-}
-
-function updateLastOnForAlarmDevice(alarmDevice) {
-    log.info("Updating lastOn for alarmDevice with id: ", alarmDevice.deviceId);
-    alarmDevice.lastOn = moment();
-}
-
 // Alarm REST API
 app.route('/alarm')
     .get(function(req, res) {
-        res.json({"enabled" : getAlarmStatus()});
+        res.json({"enabled" : alarmHandler.getEnabled()});
     })
     .put(function(req, res) {
         var enabled = req.body.enabled;
-        setAlarmStatus(enabled);
+        alarmHandler.setEnabled(enabled);
         res.sendStatus(200);
     });
 
+app.get('/alarm/devices/', function(req, res) {
+    res.json(alarmHandler.getSerializedDevices());
+});
+
+app.route('/alarm/devices/:device/')
+    .get(function(req, res) {
+        var deviceId = parseDeviceId(req.params.device);
+        res.json(alarmHandler.serializeDevice(alarmHandler.getDevice(deviceId)));
+    })
+    .put(function(req, res) {
+        var deviceId = parseDeviceId(req.params.device);
+        alarmHandler.addDevice(deviceId);
+        res.sendStatus(200);
+    })
+    .delete(function(req, res) {
+        var deviceId = parseDeviceId(req.params.device);
+        if (alarmHandler.deleteDevice(deviceId)) {
+            res.sendStatus(200);
+        } else {
+            res.sendStatus(500);
+        }
+    });
+
+// NMA REST API
 app.route('/alarm/nma/')
     .get(function(req, res) {
         res.json({
@@ -294,6 +229,7 @@ app.route('/alarm/nma/enabled')
         res.sendStatus(200);
     });
 
+// Email REST API
 app.route('/alarm/email/')
     .get(function(req, res) {
         res.json({
@@ -334,29 +270,7 @@ app.route('/alarm/email/enabled')
         res.sendStatus(200);
     });
 
-app.get('/alarm/devices/', function(req, res) {
-    res.json(serializeAlarmDevices(getAlarmDevices()));
-});
-
-app.route('/alarm/devices/:device/')
-    .get(function(req, res) {
-        var deviceId = parseDeviceId(req.params.device);
-        res.json(serializeAlarmDevice(getAlarmDevice(deviceId)));
-    })
-    .put(function(req, res) {
-        var deviceId = parseDeviceId(req.params.device);
-        addAlarmDevice(deviceId);
-        res.sendStatus(200);
-    })
-    .delete(function(req, res) {
-        var deviceId = parseDeviceId(req.params.device);
-        if (deleteAlarmDevice(deviceId)) {
-            res.sendStatus(200);
-        } else {
-            res.sendStatus(500);
-        }
-    });
-
+// Configuration file
 app.put('/configuration/', function(req, res) {
     saveConfigurationToFile(function (error, device) {
         if (error) {
