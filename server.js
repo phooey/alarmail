@@ -4,7 +4,6 @@ var server = require('http').Server(app);
 var log = require('log4js').getLogger();
 var argv = require('minimist')(process.argv.slice(2));
 var td = argv.mock ? require('./lib/mock-telldus.js')({numDevices: 3}) : require('telldus-core');
-var nma = require('nma');
 var config = require('config-file');
 var fs = require('fs');
 var moment = require('moment');
@@ -31,15 +30,19 @@ var CONFIGURATION_FILE_NAME = "alarmail.json";
 var opts = config(config.resolve(CONFIGURATION_FILE_NAME));
 
 var PORT = (process.env.PORT || opts.port || DEFAULT_PORT);
+var LOG_LEVEL = (process.env.LOG_LEVEL || "INFO");
+log.setLevel(LOG_LEVEL);
+
 var APP_NAME = "Alarmail";
+
+var EmailHandler = require('./lib/email-handler.js');
+var emailHandler = new EmailHandler(log, opts);
+
+var NMAHandler = require('./lib/nma-handler.js');
+var nmaHandler = new NMAHandler(log, opts);
 
 var alarmEnabled = opts.alarmEnabled || DEFAULT_ALARM_ENABLED;
 var alarmDevices = opts.alarmDevices || DEFAULT_ALARM_DEVICES;
-var nmaEnabled = opts.nmaEnabled || DEFAULT_NMA_ENABLED;
-var nmaApiKey = opts.nmaApiKey || DEFAULT_NMA_API_KEY;
-var emailNotificationEnabled = opts.emailNotificationEnabled || DEFAULT_EMAIL_NOTIFICATION_ENABLED;
-var emailNotificationAddress = opts.emailNotificationAddress || DEFAULT_EMAIL_NOTIFICATION_ADDRESS;
-var nodemailerConfig = opts.nodemailerConfig || DEFAULT_NODEMAILER_CONFIG;
 var suppressScript = opts.suppressScript || DEFAULT_SUPPRESS_SCRIPT;
 var filterDuplicateEvents = DEFAULT_FILTERING_ENABLED;
 var filterTimeSeconds = DEFAULT_FILTERING_SECONDS;
@@ -52,11 +55,8 @@ function generateConfigurationData() {
         "port": PORT,
         "alarmEnabled": alarmEnabled,
         "alarmDevices": alarmDevicesConfig,
-        "nmaEnabled": nmaEnabled,
-        "nmaApiKey": nmaApiKey,
-        "emailNotificationEnabled": emailNotificationEnabled,
-        "emailNotificationAddress": emailNotificationAddress,
-        "nodemailerConfig": nodemailerConfig,
+        "nma": nmaHandler.generateConfiguration(),
+        "email": emailHandler.generateConfiguration(),
         "suppressScript": suppressScript
     };
 }
@@ -84,58 +84,6 @@ function isDeviceEventDuplicate(alarmDevice) {
         alarmDevice.lastOn = now;
     }
     return duplicate;
-}
-
-// Nodemailer handling
-function sendEmailNotification(device) {
-    if (!emailNotificationEnabled) {
-        return;
-    } else if (!emailNotificationAddress) {
-        log.info("No valid emailNotificationAddress, not sending email notification.");
-        return;
-    } else if (!nodemailerConfig) {
-        log.info("No valid nodemailer config, not sending email notification.");
-        return;
-    }
-    // TODO: Unnecessary to recreate transporter for each email
-    var transporter = nodemailer.createTransport(nodemailerConfig);
-    var mailOptions = {
-        from: APP_NAME + nodemailerConfig.auth.user,
-        to: emailNotificationAddress,
-        subject: 'Alarm',
-        text: getAlarmString(device)
-    };
-    transporter.sendMail(mailOptions, function(error, info){
-        if (error) {
-            return log.error("Could not send email notification: " + error);
-        }
-        log.info('Sent email notification: ' + info.response);
-    });
-}
-
-// NMA handling
-function sendNMANotification(device) {
-    if (!nmaEnabled) {
-        return;
-    }
-    if (!nmaApiKey) {
-        log.info("Could not send NMA notification: No NMA API key configured.");
-        return;
-    }
-    nma({
-      "apikey": nmaApiKey,
-      "application": APP_NAME,
-      "event": "Alarm",
-      "description": getAlarmString(device),
-      "priority": 0,
-      "content-type": "text/plain"
-    }, function (error) {
-        if (error) {
-            log.error("Could not send NMA notification: ", error);
-        } else {
-            log.info("Successfully sent NMA notification.");
-        }
-    });
 }
 
 // Device handling
@@ -228,8 +176,13 @@ function isAlarmEnabled(deviceId) {
 
 function sendAlarm(device) {
     log.info("Sending alarm.");
-    sendNMANotification(device);
-    sendEmailNotification(device);
+    var alarmData = {
+        title: APP_NAME,
+        subject: "Alarm",
+        text: getAlarmString(device)
+    }
+    emailHandler.sendNotification(alarmData);
+    nmaHandler.sendNotification(alarmData);
 }
 
 function checkAlarm(deviceId) {
@@ -296,42 +249,6 @@ function updateLastOnForAlarmDevice(alarmDevice) {
     alarmDevice.lastOn = moment();
 }
 
-function isNmaEnabled() {
-    return nmaEnabled;
-}
-
-function getNmaApiKey() {
-    return nmaApiKey;
-}
-
-function setNmaEnabled(enabled) {
-    log.info("Setting NMA enabled to: " + enabled);
-    nmaEnabled = enabled;
-}
-
-function setNmaApiKey(apiKey) {
-    log.info("Setting NMA API key to: " + apiKey);
-    nmaApiKey = apiKey;
-}
-
-function isEmailNotificationEnabled() {
-    return emailNotificationEnabled;
-}
-
-function getEmailNotificationAddress() {
-    return emailNotificationAddress;
-}
-
-function setEmailEnabled(enabled) {
-    log.info("Setting email notifications enabled to: " + enabled);
-    emailNotificationEnabled = enabled;
-}
-
-function setEmailNotificationAddress(emailAddress) {
-    log.info("Setting email notification address to: " + emailAddress);
-    emailNotificationAddress = emailAddress;
-}
-
 // Alarm REST API
 app.route('/alarm')
     .get(function(req, res) {
@@ -346,80 +263,80 @@ app.route('/alarm')
 app.route('/alarm/nma/')
     .get(function(req, res) {
         res.json({
-            "enabled" : isNmaEnabled(),
-            "apiKey": getNmaApiKey()
+            "enabled" : nmaHandler.getEnabled(),
+            "apiKey": nmaHandler.getApiKey()
         });
     })
     .put(function(req, res) {
         var enabled = req.body.enabled;
-        setNmaEnabled(enabled);
+        nmaHandler.setEnabled(enabled);
 
         var apiKey = req.body.apiKey;
-        setNmaApiKey(apiKey);
+        nmaHandler.setApiKey(apiKey);
         res.sendStatus(200);
     });
 
 app.route('/alarm/nma/apiKey')
     .get(function(req, res) {
         res.json({
-            "apiKey": getNmaApiKey()
+            "apiKey": nmaHandler.getApiKey()
         });
     })
     .put(function(req, res) {
         var apiKey = req.body.apiKey;
-        setNmaApiKey(apiKey);
+        nmaHandler.setApiKey(apiKey);
         res.sendStatus(200);
     });
 
 app.route('/alarm/nma/enabled')
     .get(function(req, res) {
         res.json({
-            "enabled" : isNmaEnabled()
+            "enabled": nmaHandler.getApiKey()
         });
     })
     .put(function(req, res) {
         var enabled = req.body.enabled;
-        setNmaEnabled(enabled);
+        nmaHandler.setEnabled(enabled);
         res.sendStatus(200);
     });
 
 app.route('/alarm/email/')
     .get(function(req, res) {
         res.json({
-            "enabled" : isEmailNotificationEnabled(),
-            "emailNotificationAddress": getEmailNotificationAddress()
+            "enabled": emailHandler.getEnabled(),
+            "emailNotificationAddress": emailHandler.getEmailAddress()
         });
     })
     .put(function(req, res) {
         var enabled = req.body.enabled;
-        setEmailEnabled(enabled);
+        emailHandler.setEnabled(enabled);
 
         var emailAddress = req.body.emailAddress;
-        setEmailNotificationAddress(emailAddress);
+        emailHandler.setEmailAddress(emailAddress);
         res.sendStatus(200);
     });
 
 app.route('/alarm/email/address')
     .get(function(req, res) {
         res.json({
-            "emailNotificationAddress": getEmailNotificationAddress()
+            "emailNotificationAddress": emailHandler.getEmailAddress()
         });
     })
     .put(function(req, res) {
         var emailNotificationAddress = req.body.emailNotificationAddress;
-        setEmailNotificationAddress(emailNotificationAddress);
+        emailHandler.setEmailAddress(emailNotificationAddress);
         res.sendStatus(200);
     });
 
 app.route('/alarm/email/enabled')
     .get(function(req, res) {
         res.json({
-            "enabled" : isEmailNotificationEnabled()
+            "enabled": emailHandler.getEnabled()
         });
     })
     .put(function(req, res) {
         var enabled = req.body.enabled;
-        setEmailEnabled(enabled);
+        emailHandler.setEnabled(enabled);
         res.sendStatus(200);
     });
 

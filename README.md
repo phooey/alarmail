@@ -8,7 +8,7 @@ git clone https://github.com/phooey/alarmail.git .
 npm install
 cp alarmail.json.example alarmail.json
 vim alarmail.json
-<edit configuration file>
+#edit configuration file
 npm start
 ```
 

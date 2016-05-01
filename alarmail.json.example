@@ -2,16 +2,23 @@
   "port": 9001,
   "alarmEnabled": true,
   "alarmDevices": [
-    { "deviceId": 1 } ],
-  "nmaEnabled": false,
-  "nmaApiKey": "deadc0de",
-  "emailNotificationEnabled": false,
-  "emailNotificationAddress": "example@example.com",
-  "nodemailerConfig": {
-    "service": "Gmail",
-    "auth": {
-      "user": "user@gmail.com",
-      "pass": "password"
+    {
+      "deviceId": 1
+    }
+  ],
+  "nma": {
+    "enabled": false,
+    "apiKey": "deadc0de"
+  },
+  "email": {
+    "enabled": false,
+    "emailAddress": "example@example.com",
+    "nodemailerConfig": {
+      "service": "Gmail",
+      "auth": {
+        "user": "user@gmail.com",
+        "pass": "password"
+      }
     }
   },
   "suppressScript": ""
